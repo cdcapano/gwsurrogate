@@ -882,7 +882,8 @@ filename: The hdf5 file containing the surrogate data."
 
 
     def __call__(self, x, fM_low=None, fM_ref=None, dtM=None,
-            timesM=None, dfM=None, freqsM=None, mode_list=None, ellMax=None,
+            timesM=None, dfM=None, freqsM=None,
+            mode_list=None, ellMax=None,
             precessing_opts=None, tidal_opts=None, par_dict=None,
             frame='inertial'):
         """
@@ -972,6 +973,8 @@ Returns:
         return_dynamics = precessing_opts.pop('return_dynamics', False)
         self._check_unused_opts(precessing_opts)
 
+        if ellMax is not None and mode_list is not None:
+            raise ValueError("Cannot specify both mode_list and ellMax.")
         if ellMax is None:
             ellMax = 4
         if ellMax > 4:
@@ -1025,6 +1028,15 @@ Returns:
         # Evaluate coorbital waveform surrogate
         h_coorb = self.coorb_sur(q, chiA_coorb, chiB_coorb, \
                 ellMax=ellMax)
+
+        if mode_list is not None:
+            # shut off the other modes before combining
+            i=0
+            for ell in range(2, ellMax+1):
+                for m in range(-ell, ell+1):
+                    if (ell, m) not in mode_list:
+                        h_coorb[i] *= 0.
+                    i += 1
 
         # Transform the sparsely sampled waveform
         if frame == 'inertial':
